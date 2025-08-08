@@ -69,7 +69,13 @@ class KaggleDatasetTraining():
         
         # Example cleaning steps
         
-        df["Churn"] = np.where(df["Churn"] == "Yes", 1, 0)
+        bin_cols = ["gender","Partner","Dependents","PhoneService","PaperlessBilling","Churn"]
+        for col in bin_cols:
+            df[col]=df[col].map({"Yes":1, "No":0, "Male":1, "Female":0})
+            
+        multi_cols= ["MultipleLines","InternetService","OnlineSecurity","OnlineBackup","DeviceProtection","TechSupport","StreamingTV","StreamingMovies","Contract","PaymentMethod"]
+
+        df = pd.get_dummies(df, columns=multi_cols, drop_first=True)
         
         logger.info(df.info())
         
