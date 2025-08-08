@@ -9,3 +9,8 @@ scikit-learn
 joblib
 numpy
 gunicorn
+seaborn
+matplotlib
+plotly-express
+xgboost
+lightgbm
