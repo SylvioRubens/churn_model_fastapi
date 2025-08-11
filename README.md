@@ -1,8 +1,6 @@
 # Churn Model with FastAPI
 
-This project consists on creating a fastapi application, where this application will be responsible of predicting costumer retention. The response of the api will be made based on an Machine Learning model, that is pre-trained to understand some caracteristics from clients, that may show us if they will left the services or not.
-
-This project provides a fastapi application for predicting customer churn using a machine learning model trained on the [Telco Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn) from Kaggle. The API is built with FastAPI and exposes endpoints for health checks and churn prediction. The machine learning model is trained and saved using scripts in the `train/` directory.
+This project consists on creating a fastapi application, where this application will be responsible of predicting costumer retention. The response of the api will be made based on an Machine Learning model, that is pre-trained to understand some caracteristics from clients, that may show us if they will left the services or not. The data used for training is the [Telco Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn) from Kaggle. The API is built with FastAPI and exposes endpoints for health checks and churn prediction. The machine learning model is trained and saved using scripts in the `train/` directory.
 
 
 ## 📂 Project Structure
@@ -24,6 +22,8 @@ churn_model_fastapi/
 │   └── columns.pkl             # Model input columns
 ├── train/
 │   └── train_model.py          # Model training and saving script
+├── notebook/
+│   └── EDA.ipynb               # Notebook created for exploratory data analysis, to understand about the data, relevant features and analyse what the best model for this project would be. 
 ├── logs/
 │   ├── app.log                 # Application logs (rotated)
 │   ├── access.log              # Gunicorn access logs
@@ -32,7 +32,6 @@ churn_model_fastapi/
 ├── requirements.txt            # Python dependencies
 ├── Dockerfile                  # Docker build instructions
 ├── gunicorn.conf.py            # Gunicorn server configuration
-├── .env                        # Environment variables (not committed)
 ├── .env_example                # Example environment variables
 └── README.md                   # Project documentation
 ```
@@ -67,9 +66,9 @@ churn_model_fastapi/
 
 5. **Run the API locally:**
    ```sh
-   uvicorn app.main:app --reload 
+   gunicorn
    ```
-   Ou 
+   OR 
    ```sh
    python -m app.main
    ```
@@ -84,12 +83,14 @@ churn_model_fastapi/
 
 2. **Run the container:**
    ```sh
-   docker run --env-file .env -p 8000:8000 churn-api
+   sudo docker run -p 8000:8000  -v $(pwd)/logs:/app/logs churn-api
    ```
 
    - The API will be available at `http://localhost:8000`.
 
    - The container uses Gunicorn with Uvicorn workers, as configured in [`gunicorn.conf.py`](gunicorn.conf.py).
+
+   - The logs from container can be analyzed in "logs/" folder.
 
 ## 🛣️ API Endpoints
 
