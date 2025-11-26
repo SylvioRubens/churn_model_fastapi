@@ -1,0 +1,7 @@
+services:
+  api:
+
+  mlflow:
+    image: bitnami/mlflow:3.2.2
+    container_name: mlflow
+    
