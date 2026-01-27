@@ -1,13 +1,21 @@
 import pandas as pd
-import requests
 import kagglehub
 import glob
 import numpy as np
 import os
 import logging
 import joblib
+import mlflow
+import mlflow.sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import(
+    roc_auc_score,
+    average_precision_score,
+    precision_recall_fscore_support,
+    log_loss
+)
+
 from dotenv import load_dotenv
 
 
@@ -58,7 +66,7 @@ class KaggleDatasetTraining():
         
         
     def clean_dataset(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Function to clean the dataset.
+        """Function to clean the dataset, based on the EDA notebook.
 
         Args:
             df (DataFrame): pandas DataFrame containing the data from the dataset
@@ -86,7 +94,7 @@ class KaggleDatasetTraining():
         return df
     
     def train_model(self, df: pd.DataFrame):
-        """Function to train the model.
+        """Function to train the model and create an experiment tracking on MLFlow.
 
         Args:
             df (DataFrame): pandas DataFrame containing the data from the dataset
@@ -104,16 +112,29 @@ class KaggleDatasetTraining():
         
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
         
-        classifier = RandomForestClassifier()
+        mlflow.set_experiment("Telco Customer Churn Prediction")
         
-        classifier.fit(x_train, y_train)
-        
-        score = classifier.score(x_test, y_test)
+        with mlflow.start_run(run_name="RandomForestClassifier"):
+            self.classifier = RandomForestClassifier()
+            
+            self.classifier.fit(x_train, y_train)
+            
+            y_pred_proba = self.classifier.predict_proba(x_test)[:, 1]
+            y_pred = (y_pred_proba >= 0.5).astype(int)
+            
+            mlflow.log_param("model", "RandomForestClassifier")
+            mlflow.log_metric("roc_auc", roc_auc_score(y_test, y_pred_proba))
+            mlflow.log_metric("pr_auc", average_precision_score(y_test, y_pred_proba))
+            mlflow.log_metric("average_precision", average_precision_score(y_test, y_pred_proba))
+            precision_, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, average='binary')
+            mlflow.log_metric("precision", precision_)
+            mlflow.log_metric("recall", recall)
+            mlflow.log_metric("f1_score", f1)
+            mlflow.log_metric("log_loss", log_loss(y_test, y_pred_proba))
+
+            mlflow.sklearn.log_model(self.classifier, "model")
         
         joblib.dump(x_train.columns.tolist(), f"{os.path.dirname(os.getcwd())}/models/columns.pkl")
-        
-        return classifier, score
-    
     
     def save_model(self, model, filename: str, path: str = "models/"):
         """Function to save the trained model to a local file.
@@ -153,10 +174,8 @@ if __name__ == "__main__":
     
     logger.info("Preparing for training...")
     
-    clf, clf_score = training.train_model(df_cleaned)
+    training.train_model(df_cleaned)
     
-    logger.info(f"Model trained with accuracy: {clf_score}")
-    
-    training.save_model(clf, "churn_model.pkl", path=f"{os.path.dirname(os.getcwd())}/models/")
+    logger.info(f"Model trained with accuracy: {training.clf_score}")
     
     logger.info("Training completed and model saved successfully.")
