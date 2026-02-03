@@ -6,3 +6,8 @@ __pycache__/
 
 logs/*
 !logs/dont_remove
+
+mlartifacts/*
+mlruns
+mlflow.db
+catboost_info

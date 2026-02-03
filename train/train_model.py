@@ -7,6 +7,7 @@ import logging
 import joblib
 import mlflow
 import mlflow.sklearn
+import optuna
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import(
@@ -35,6 +36,9 @@ load_dotenv()
 class KaggleDatasetTraining():
     def __init__(self):
         """Initialize the KaggleDatasetTraining class."""
+        
+        mlflow.set_experiment("Telco Customer Churn Prediction")
+        
         kaggle_username = os.getenv("KAGGLE_USERNAME")
         kaggle_key = os.getenv("KAGGLE_KEY")
         
@@ -108,13 +112,9 @@ class KaggleDatasetTraining():
         
         x = pd.get_dummies(x, drop_first=True)
         
-        logger.info(x.info())
-        
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
         
-        mlflow.set_experiment("Telco Customer Churn Prediction")
-        
-        with mlflow.start_run(run_name="RandomForestClassifier"):
+        with mlflow.start_run(run_name="Telco_Churn_Classifier"):
             self.classifier = RandomForestClassifier()
             
             self.classifier.fit(x_train, y_train)
@@ -134,7 +134,70 @@ class KaggleDatasetTraining():
 
             mlflow.sklearn.log_model(self.classifier, "model")
         
-        joblib.dump(x_train.columns.tolist(), f"{os.path.dirname(os.getcwd())}/models/columns.pkl")
+        joblib.dump(x_train.columns.tolist(), f"{os.getcwd()}/models/columns.pkl")
+        
+    def optimize_hyperparameters(self, df: pd.DataFrame):
+        """Function to optimize hyperparameters using Optuna.
+
+        Args:
+            x_train: training features
+            y_train: training labels
+
+        Returns:
+            dict: best hyperparameters found
+        """
+        def objective(trial):
+            params = {
+                "n_estimators": trial.suggest_int('n_estimators', 50, 500),
+                "max_depth": trial.suggest_int('max_depth', 3, 30),
+                "min_samples_split": trial.suggest_int('min_samples_split', 2, 10),
+                "min_samples_leaf": trial.suggest_int('min_samples_leaf', 1, 5),
+                "random_state": 42,
+                "n_jobs": -1
+            }
+
+            with mlflow.start_run(nested=True, run_name="Telco_Churn_Classifier_Optimization"):
+                model = RandomForestClassifier(**params)
+                model.fit(x_train, y_train)
+                
+                y_pred_proba = model.predict_proba(x_test)[:, 1]
+                
+                roc_auc = roc_auc_score(y_test, y_pred_proba)
+                
+                mlflow.log_params(params)
+                mlflow.log_metric("roc_auc", roc_auc)
+            
+            return roc_auc
+        
+        x = df.drop(['Churn'], axis=1)
+        y = df['Churn']
+        
+        x = pd.get_dummies(x, drop_first=True)
+        
+        logger.info(x.info())
+        
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+
+        study = optuna.create_study(direction='maximize')
+        study.optimize(objective, n_trials=50)
+        
+        logger.info("Best Params:", study.best_params)
+        logger.info("Best ROC_AUC:", str(study.best_value))
+        
+        best_params = study.best_params
+        
+        with mlflow.start_run(run_name="Best_Parameters_Run"):
+            model = RandomForestClassifier(**best_params)
+            model.fit(x_train, y_train)
+            
+            y_test_proba = model.predict_proba(x_test)[:, 1]
+            
+            mlflow.log_params(best_params)
+            mlflow.log_metric("roc_auc", roc_auc_score(y_test, y_test_proba))
+            mlflow.log_metric("pr_auc", average_precision_score(y_test, y_test_proba))
+            mlflow.log_metric("log_loss", log_loss(y_test, y_test_proba))
+            
+            mlflow.sklearn.log_model(model, "optimized_churn_model")
     
     def save_model(self, model, filename: str, path: str = "models/"):
         """Function to save the trained model to a local file.
@@ -170,12 +233,10 @@ if __name__ == "__main__":
     
     df_cleaned = training.clean_dataset(df)
     
-    logger.info(df_cleaned.info())
-    
     logger.info("Preparing for training...")
     
     training.train_model(df_cleaned)
     
-    logger.info(f"Model trained with accuracy: {training.clf_score}")
+    training.optimize_hyperparameters(df_cleaned)
     
     logger.info("Training completed and model saved successfully.")

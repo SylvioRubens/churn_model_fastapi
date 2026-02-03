@@ -7,7 +7,7 @@ kagglehub
 python-dotenv
 scikit-learn
 joblib
-numpy
+numpy==2.3
 gunicorn
 seaborn
 matplotlib
@@ -15,3 +15,5 @@ plotly-express
 xgboost
 lightgbm
 mlflow==3.8.1
+shap==0.50.0
+catboost==1.2.8
