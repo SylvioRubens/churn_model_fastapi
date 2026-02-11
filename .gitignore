@@ -11,3 +11,5 @@ mlartifacts/*
 mlruns
 mlflow.db
 catboost_info
+
+git

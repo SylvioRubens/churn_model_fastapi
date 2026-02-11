@@ -1,31 +1,31 @@
-import joblib
+from app.core.logger import setup_logger
 import os
 import pandas as pd
-from app.core.logger import setup_logger
+import mlflow.pyfunc
 
 logger = setup_logger()
 
 class Predictor:
-    def __init__(self, model_path: str):
-        """Initialize the Predictor class with the path to the model, verifying if the model exists."""
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file not found at {model_path}")
+    def __init__(self, model_uri: str):
+        """Initialize the Predictor class by instantiating the model from MlFlow."""
         
-        self.model_path = model_path
+        MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
+        MLFLOW_EXPERIMENT_NAME = os.getenv("MLFLOW_EXPERIMENT_NAME")
+        
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)
+        
+        self.model_uri = model_uri
         
         self.model, self.columns_expected = self.load_model()
 
     def load_model(self):
         """Load the trained model from the specified path."""
         try:
-            model = joblib.load(self.model_path)
-            
-            model_expected = joblib.load("models/columns.pkl")
-            
-            return model, model_expected
+            return mlflow.pyfunc.load_model(self.model_uri)
         
         except Exception as e:
-            raise RuntimeError(f"Failed to load model from {self.model_path}: {str(e)}")
+            raise RuntimeError(f"Failed to load model from {self.model_uri} on MLFlow: {str(e)}")
 
     def predict(self, data: dict):
         """Make a prediction using the loaded model."""

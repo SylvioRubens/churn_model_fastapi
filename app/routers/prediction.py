@@ -7,10 +7,12 @@ logger = setup_logger()
 
 router = APIRouter()
 
+MODEL_URI = "models:/churn_model/Production"
+
 @router.post("/predict")
 def predict(payload: InputData):
     try:
-        predictor = Predictor(model_path="models/churn_model.pkl")
+        predictor = Predictor(model_uri=MODEL_URI)
         
         churn = predictor.predict(payload.model_dump())
         

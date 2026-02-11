@@ -156,16 +156,12 @@ class KaggleDatasetTraining():
                 "n_jobs": -1
             }
 
-            with mlflow.start_run(nested=True, run_name="Telco_Churn_Classifier_Optimization"):
-                model = RandomForestClassifier(**params)
-                model.fit(x_train, y_train)
-                
-                y_pred_proba = model.predict_proba(x_test)[:, 1]
-                
-                roc_auc = roc_auc_score(y_test, y_pred_proba)
-                
-                mlflow.log_params(params)
-                mlflow.log_metric("roc_auc", roc_auc)
+            model = RandomForestClassifier(**params)
+            model.fit(x_train, y_train)
+            
+            y_pred_proba = model.predict_proba(x_test)[:, 1]
+            
+            roc_auc = roc_auc_score(y_test, y_pred_proba)
             
             return roc_auc
         
