@@ -1,6 +1,7 @@
 fastapi
 uvicorn
 pydantic
+pydantic-settings==2.13.1
 pandas
 requests
 kagglehub

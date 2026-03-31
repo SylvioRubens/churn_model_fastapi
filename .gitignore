@@ -1,14 +1,18 @@
+#Environment variables and virtual environment
 .env
 .venv/*
 __pycache__/
 *.pyc
 *.pyo
+.vscode/*
 
+# Ignore logs, but keeping the folder with a placeholder file to prevent deletion
 logs/*
 !logs/dont_remove
 
-mlartifacts/*
-mlruns
+# MLflow artifacts and database
+mlartifacts/
+mlruns/
 mlflow.db
 catboost_info
 
